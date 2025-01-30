@@ -1,5 +1,26 @@
 import { put, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
+import axios from "axios";
+
+async function transcribeVideoWithGroq(videoUrl) {
+  try {
+    const response = await axios.post(
+      process.env.GROQ_API_ENDPOINT, // Ensure your Groq endpoint is correct
+      { url: videoUrl }, // Send the video URL
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return response.data.transcription; // Extract and return transcription
+  } catch (error) {
+    console.error("Error transcribing video:", error);
+    return "Transcription failed."; // Return a default error message
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +41,11 @@ export async function POST(req: Request) {
       token: process.env.BLOB_READ_WRITE_TOKEN, // Ensure this is set correctly
     });
 
-    return NextResponse.json({ url: blob.url });
+    const transcription = await transcribeVideoWithGroq(blob.url);
+
+    //Return both the video URL & transcription
+    return NextResponse.json({ url: blob.url, transcription });
+    
   } catch (error) {
     console.error("Error uploading file:", error);
     return NextResponse.json(
