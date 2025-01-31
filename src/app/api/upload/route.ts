@@ -1,26 +1,30 @@
 import { put, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import axios from "axios";
+import Groq from "groq-sdk"
 
-async function transcribeVideoWithGroq(videoUrl) {
-  try {
-    const response = await axios.post(
-      process.env.GROQ_API_ENDPOINT, // Ensure your Groq endpoint is correct
-      { url: videoUrl }, // Send the video URL
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
 
-    return response.data.transcription; // Extract and return transcription
-  } catch (error) {
-    console.error("Error transcribing video:", error);
-    return "Transcription failed."; // Return a default error message
-  }
-}
+// async function transcribeVideoWithGroq(videoUrl) {
+//   try {
+//     const response = await axios.post(
+//       process.env.GROQ_API_ENDPOINT, // Ensure your Groq endpoint is correct
+//       { url: videoUrl }, // Send the video URL
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+
+//     return response.data.transcription; // Extract and return transcription
+//   } catch (error) {
+//     console.error("Error transcribing video:", error);
+//     return "Transcription failed."; // Return a default error message
+//   }
+// }
+
+
 
 export async function POST(req: Request) {
   try {
@@ -41,8 +45,27 @@ export async function POST(req: Request) {
       token: process.env.BLOB_READ_WRITE_TOKEN, // Ensure this is set correctly
     });
 
-    const transcription = await transcribeVideoWithGroq(blob.url);
+    console.log("✅ Video uploaded to:", blob.url);
 
+    // ✅ Fetch the video file from Vercel Blob Storage
+    const videoResponse = await fetch(blob.url);
+    const videoBuffer = await videoResponse.blob();
+    const vidFile = new File([videoBuffer], "video.mp4", { type: "video/mp4" });
+
+    console.log("🚀 Sending video to Groq API for transcription...");
+    const groq = new Groq({apiKey: process.env.GROQ_API_KEY});
+  
+    const transcrption = await groq.audio.transcriptions.create({
+      model: 'distil-whisper-large-v3-en',
+      file: vidFile,  // ✅ Fix: Change vidFile to file
+      response_format: 'text',
+    });
+
+    const transcription = String(transcrption);
+    console.log(transcription);
+
+
+    const vertexAI = new VertexAI(){}
     //Return both the video URL & transcription
     return NextResponse.json({ url: blob.url, transcription });
     
