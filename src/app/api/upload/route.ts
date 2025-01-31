@@ -1,7 +1,13 @@
-import { put, list } from "@vercel/blob";
+import { put, list, Part } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import axios from "axios";
 import Groq from "groq-sdk"
+import { GenerateContentRequest, GenerativeModel } from "@google-cloud/vertexai";
+import { VertexAI } from "@google-cloud/vertexai"; 
+import { Part as VertexAIPart } from "@google-cloud/vertexai";
+//import { Part } from "@google-cloud/vertexai"; 
+
+
 
 
 // async function transcribeVideoWithGroq(videoUrl) {
@@ -65,10 +71,72 @@ export async function POST(req: Request) {
     console.log(transcription);
 
 
-    const vertexAI = new VertexAI(){
+    const vertexAI = new VertexAI({
       project: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      location: "us-east1"
+      location: "us-east1",
+    });
+    const generativeModel = vertexAI.getGenerativeModel({
+      model: "gemini-1.5-flash-001",
+
+    });
+
+
+
+    interface Part {
+      fileData?: {
+        fileUrl: string;
+        mimeType: string;
+      };
+      text?:{
+
+      }
     }
+    
+
+
+    const filePart: Part = {
+      fileData : {
+        fileUrl : blob.url,
+        mimeType: "video/mp4",
+      },
+    };
+    
+
+
+    const textPart: Part = {  // Fixed syntax errors
+      text: `Provide a comprehensive analysis of this video.
+            
+            Include:
+              1. Main subject and content description
+              2. Location and setting details if visible
+              3. Any text or speech content
+              4. Notable actions or events
+              5. Overall mood and style
+    
+            Please format this as a clear, well-structured summary.`,
+    };
+    
+
+
+    const request: GenerateContentRequest = {
+      contents: [
+        {
+          role: "user",
+          parts: [filePart as VertexAIPart, textPart as VertexAIPart], 
+        },
+      ],
+    };
+
+    const resp = await generativeModel.generateContent(request);
+    const contentResponse = await resp.response;
+
+    if(!contentResponse.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error("Failed to generate video analysis");
+    }
+    const summary = contentResponse.candidates[0].content.parts[0].text;
+    console.log(summary);
+
+
     //Return both the video URL & transcription
     return NextResponse.json({ url: blob.url, transcription });
     
