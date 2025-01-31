@@ -65,7 +65,10 @@ export async function POST(req: Request) {
     console.log(transcription);
 
 
-    const vertexAI = new VertexAI(){}
+    const vertexAI = new VertexAI(){
+      project: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      location: "us-east1"
+    }
     //Return both the video URL & transcription
     return NextResponse.json({ url: blob.url, transcription });
     
