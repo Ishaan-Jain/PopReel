@@ -7,8 +7,8 @@ import { VertexAI } from "@google-cloud/vertexai";
 import { Part as VertexAIPart } from "@google-cloud/vertexai";
 //import { Part } from "@google-cloud/vertexai"; 
 import { GoogleAuth } from 'google-auth-library';
-import { GoogleGenerativeAI } from '@google-ai/generativelanguage';
-
+//import { GoogleGenerativeAI } from '@google-ai/generativelanguage';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
 
