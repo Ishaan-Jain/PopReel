@@ -2,10 +2,12 @@ import { put, list, Part } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import axios from "axios";
 import Groq from "groq-sdk"
-import { GenerateContentRequest, GenerativeModel } from "@google-cloud/vertexai";
+import { GenerateContentRequest, GenerativeModel, GoogleGenerativeAIError } from "@google-cloud/vertexai";
 import { VertexAI } from "@google-cloud/vertexai"; 
 import { Part as VertexAIPart } from "@google-cloud/vertexai";
 //import { Part } from "@google-cloud/vertexai"; 
+import { GoogleAuth } from 'google-auth-library';
+import { GoogleGenerativeAI } from '@google-ai/generativelanguage';
 
 
 
@@ -70,6 +72,7 @@ export async function POST(req: Request) {
     const transcription = String(transcrption);
     console.log(transcription);
 
+    
 
     const vertexAI = new VertexAI({
       project: process.env.GOOGLE_CLOUD_PROJECT_ID,
@@ -77,14 +80,13 @@ export async function POST(req: Request) {
     });
     const generativeModel = vertexAI.getGenerativeModel({
       model: "gemini-1.5-flash-001",
-
     });
 
 
 
     interface Part {
       fileData?: {
-        fileUrl: string;
+        fileUri: string;
         mimeType: string;
       };
       text?:{
@@ -93,10 +95,10 @@ export async function POST(req: Request) {
     }
     
 
-
+    console.log(blob.url)
     const filePart: Part = {
       fileData : {
-        fileUrl : blob.url,
+        fileUri : blob.url,
         mimeType: "video/mp4",
       },
     };
@@ -136,6 +138,26 @@ export async function POST(req: Request) {
     const summary = contentResponse.candidates[0].content.parts[0].text;
     console.log(summary);
 
+    const tagsResponse = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: "Using the following summary give tags to the content and the tags should from one of the following Music, Bussiness, Sports, Finance, Movies" + summary,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+    })
+
+    console.log(tagsResponse.choices[0].message.content)
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+
+    const model = genAI.getGenerativeModel({model: "text-embedding-004"})
+
+
+    const result = await model.embedContent(summary)
+
+    console.log(result.embedding.values)
 
     //Return both the video URL & transcription
     return NextResponse.json({ url: blob.url, transcription });
