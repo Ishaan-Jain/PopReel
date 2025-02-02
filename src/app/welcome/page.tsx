@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -35,14 +36,29 @@ export default function WelcomeForm() {
       interests: selectedInterests,
     };
 
-    console.log("router", router);
-    
+    try {
+      // Send POST request to your backend endpoint (adjust the URL as needed)
+      const response = await fetch("/api/welcome", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        // Optionally handle errors here
+        console.error("Failed to submit form data", await response.text());
+      }
+    } catch (error) {
+      console.error("Error sending POST request:", error);
+    }
+
+    // Alert the user and then redirect
     alert(
       `Thank you, ${username}! Your profile has been set up.\nRedirecting to the homepage...`
     );
-
     window.location.href = "/";
-    
   };
 
   return (
@@ -112,14 +128,18 @@ export default function WelcomeForm() {
 
       <style jsx>{`
         .container {
-            min-height: 100vh;
-            width: 100vw;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at bottom right, #ff0000, #000 50%);
-            padding: 1rem;
-            box-sizing: border-box;
+          min-height: 100vh;
+          width: 100vw;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: radial-gradient(
+            circle at bottom right,
+            #ff0000,
+            #000 50%
+          );
+          padding: 1rem;
+          box-sizing: border-box;
         }
         .card {
           background: #fff;

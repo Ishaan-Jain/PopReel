@@ -6,7 +6,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 const isProtectedRoute = createRouteMatcher(['/(.*)']);
 
 // List of public routes that should not be protected.
-const publicRoutes = ['/sign-up', '/sign-in', '/welcome'];
+const publicRoutes = ['/sign-up', '/sign-in', '/'];
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
 
