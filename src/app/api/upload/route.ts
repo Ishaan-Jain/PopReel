@@ -9,6 +9,7 @@ import { Part as VertexAIPart } from "@google-cloud/vertexai";
 import { GoogleAuth } from 'google-auth-library';
 //import { GoogleGenerativeAI } from '@google-ai/generativelanguage';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "@/app/lib/supabaseClient"; 
 
 
 
@@ -144,13 +145,14 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "user",
-          content: "Using the following summary give tags to the content and the tags should from one of the following Music, Bussiness, Sports, Finance, Movies" + summary,
+          content: "Using the following summary give tags to the content and the tags should from one of the following Music, Bussiness, Sports, Finance, Movies. Return the response as comma seperated strings of tag" + summary,
         },
       ],
       model: "llama-3.3-70b-versatile",
     })
 
     console.log(tagsResponse.choices[0].message.content)
+    const videoTags = tagsResponse.choices[0].message.content?.split(',')
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
@@ -161,8 +163,71 @@ export async function POST(req: Request) {
 
     console.log(result.embedding.values)
 
-    //Return both the video URL & transcription
-    return NextResponse.json({ url: blob.url, transcription });
+    const embeddings = result.embedding.values;
+    var userName = null;
+
+    try {
+      // If you're using an absolute URL, you already know what you're calling:
+      const requestUrl = "https://localhost:3001/api/homepage";
+      console.log("Requesting URL:", requestUrl);
+    
+      const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    
+      // Log the URL from the response object:
+      console.log("Response URL:", response.url);
+    
+      // Process the JSON result
+      const result = await response.json();
+      console.log("Fetched data:", result);
+    
+      // Assuming your response JSON has a 'userName' property:
+      console.log(result.userName)
+      const userName = result.userName;
+      console.log("Retrieved username:", userName);
+    } catch (error) {
+      console.error("Error fetching userName:", error);
+    }
+    
+
+
+    //// Query Supabase to retrieve the user id from the users table
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("username", userName)
+      .single();
+    if (userError || !userData) {
+      throw new Error("User not found in Supabase: " + (userError?.message || ""));
+    }
+    const user_id = userData.id;
+    console.log("Retrieved user_id:", user_id);
+
+    // 10. Insert a new record into the Supabase "videos" table with all the details
+    const { error: insertError } = await supabase.from("videos").insert({
+      user_id,
+      video_url: blob.url,
+      transcription,
+      summary,
+      duration_second: 0, // Set to 0 for now
+      videoTags,
+      embeddings,
+    });
+    if (insertError) {
+      throw new Error("Supabase insert error: " + insertError.message);
+    }
+
+    // 11. Return a success response with details (as needed)
+    return NextResponse.json({
+      video_url: blob.url,
+      transcription,
+      summary,
+      videoTags,
+      embeddings,
+
+    });
     
   } catch (error) {
     console.error("Error uploading file:", error);

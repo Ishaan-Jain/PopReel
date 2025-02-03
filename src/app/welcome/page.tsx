@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -28,38 +27,100 @@ export default function WelcomeForm() {
     }
   };
 
-  const handleSubmit = async () => {
-    const userData = {
-      username,
-      country,
-      city,
-      interests: selectedInterests,
-    };
+  // const handleSubmit = async () => {
+  //   const userData = {
+  //     username,
+  //     country,
+  //     city,
+  //     interests: selectedInterests,
+  //   };
 
+  //   console.log("router", router);
+    
+  //   alert(
+  //     `Thank you, ${username}! Your profile has been set up.\nRedirecting to the homepage...`
+  //   );
+
+  //   window.location.href = "/";
+    
+  // };
+
+
+  // THE NEW handleSubmit function
+
+  /*const handleSubmit = async () => {
+    if (!username || !country || !city) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    const apiUrl = "/api/welcome";
+  
+    const userData = { username, country, city, interests: selectedInterests };
+  
     try {
-      // Send POST request to your backend endpoint (adjust the URL as needed)
-      const response = await fetch("/api/welcome", {
+      console.log("📤 Sending request to API:", userData); // ✅ Log request data
+  
+      const response = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
-
+  
+      console.log("📥 Raw response:", response); // ✅ Log the raw response
+  
+      const result = await response.json().catch(() => null); // ✅ Handle invalid JSON response
+  
+      console.log("📥 API Response:", result); // ✅ Log parsed response
+  
       if (!response.ok) {
-        // Optionally handle errors here
-        console.error("Failed to submit form data", await response.text());
+        alert(`Error: ${result?.error || "Unknown error"}`);
+        return;
       }
+  
+      alert(`Thank you, ${username}! Your profile has been set up.`);
+      router.push("/");
     } catch (error) {
-      console.error("Error sending POST request:", error);
+      console.error("🚨 Unexpected frontend error:", error);
+      alert("An unexpected error occurred.");
+    }
+  };*/
+
+
+  const handleSubmit = async () => {
+  const userData = { username, country, city, interests: selectedInterests };
+  
+  try {
+    console.log("📤 Sending request to API:", userData);
+
+    const response = await fetch("/api/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    });
+
+    // ✅ Log full response before parsing
+    console.log("📥 Raw response (before JSON):", response);
+
+    const textResponse = await response.text(); // ✅ Get raw response as text
+    console.log("📥 Raw response body:", textResponse);
+
+    const result = JSON.parse(textResponse); // ✅ Try parsing JSON manually
+    console.log("📥 API Response:", result);
+
+    if (!response.ok) {
+      alert(`Error: ${result?.error || "Unknown error"}`);
+      return;
     }
 
-    // Alert the user and then redirect
-    alert(
-      `Thank you, ${username}! Your profile has been set up.\nRedirecting to the homepage...`
-    );
-    window.location.href = "/";
-  };
+    alert(`Thank you, ${username}! Your profile has been set up.`);
+  } catch (error) {
+    console.error("🚨 Unexpected frontend error:", error);
+    alert("An unexpected error occurred.");
+  }
+};
+
+  
+
 
   return (
     <div className="container">
@@ -128,18 +189,14 @@ export default function WelcomeForm() {
 
       <style jsx>{`
         .container {
-          min-height: 100vh;
-          width: 100vw;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(
-            circle at bottom right,
-            #ff0000,
-            #000 50%
-          );
-          padding: 1rem;
-          box-sizing: border-box;
+            min-height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at bottom right, #ff0000, #000 50%);
+            padding: 1rem;
+            box-sizing: border-box;
         }
         .card {
           background: #fff;
