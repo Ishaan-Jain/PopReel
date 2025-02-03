@@ -1,6 +1,8 @@
 // pages/api/welcome.js
 import { supabase } from "@/app/lib/supabaseClient"; 
 import { NextRequest, NextResponse } from "next/server";
+import { getAuth, clerkClient } from '@clerk/nextjs/server';
+
 export async function POST(req: NextRequest) {
   try {
     // Parse the JSON body from the request
@@ -9,8 +11,13 @@ export async function POST(req: NextRequest) {
     // Process the data as needed (e.g., save to a database)
     console.log("Received user data:", { username, country, city, interests });
 
-    
-    req.cookies.set("userName", username);
+    const { userId } = getAuth(req);
+
+  
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId!);
+    const email = user.emailAddresses[0]?.emailAddress;
+
 
     const { data, error } = await supabase
       .from("users")
@@ -18,7 +25,8 @@ export async function POST(req: NextRequest) {
         username, 
         country, 
         city, 
-        interests 
+        interests,
+        email
       }])
       .select();
 
@@ -28,14 +36,6 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("✅ User added to Supabase:", data);
-
-    const response = await fetch("http://localhost:3001/api/homepage", {  // ✅ Correct place for fetch
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username }),
-    });
-
-    console.log(response);
 
     // Return a successful response
     return NextResponse.json({ message: "Profile created successfully" });

@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+
+
 export default function WelcomeForm() {
   const router = useRouter();
 
@@ -113,6 +115,8 @@ export default function WelcomeForm() {
     }
 
     alert(`Thank you, ${username}! Your profile has been set up.`);
+
+    window.location.href = "/";
   } catch (error) {
     console.error("🚨 Unexpected frontend error:", error);
     alert("An unexpected error occurred.");

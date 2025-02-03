@@ -1,5 +1,5 @@
 import { put, list, Part } from "@vercel/blob";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import Groq from "groq-sdk"
 import { GenerateContentRequest, GenerativeModel, GoogleGenerativeAIError } from "@google-cloud/vertexai";
@@ -10,6 +10,7 @@ import { GoogleAuth } from 'google-auth-library';
 //import { GoogleGenerativeAI } from '@google-ai/generativelanguage';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "@/app/lib/supabaseClient"; 
+import { getAuth, clerkClient } from '@clerk/nextjs/server';
 
 
 
@@ -35,7 +36,7 @@ import { supabase } from "@/app/lib/supabaseClient";
 
 
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -48,7 +49,13 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log()
+
+    const { userId } = getAuth(req);
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId!);
+    const email = user.emailAddresses[0]?.emailAddress;
+    console.log(email)
+
 
     // Upload file to Vercel Blob Storage
     const blob = await put(filename, file, {
@@ -152,7 +159,7 @@ export async function POST(req: Request) {
     })
 
     console.log(tagsResponse.choices[0].message.content)
-    const videoTags = tagsResponse.choices[0].message.content?.split(',')
+    const tags = tagsResponse.choices[0].message.content?.split(',')
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
@@ -163,33 +170,8 @@ export async function POST(req: Request) {
 
     console.log(result.embedding.values)
 
-    const embeddings = result.embedding.values;
-    var userName = null;
+    const embedding = result.embedding.values;
 
-    try {
-      // If you're using an absolute URL, you already know what you're calling:
-      const requestUrl = "https://localhost:3001/api/homepage";
-      console.log("Requesting URL:", requestUrl);
-    
-      const response = await fetch(requestUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-    
-      // Log the URL from the response object:
-      console.log("Response URL:", response.url);
-    
-      // Process the JSON result
-      const result = await response.json();
-      console.log("Fetched data:", result);
-    
-      // Assuming your response JSON has a 'userName' property:
-      console.log(result.userName)
-      const userName = result.userName;
-      console.log("Retrieved username:", userName);
-    } catch (error) {
-      console.error("Error fetching userName:", error);
-    }
     
 
 
@@ -197,7 +179,7 @@ export async function POST(req: Request) {
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("username", userName)
+      .eq("email", email)
       .single();
     if (userError || !userData) {
       throw new Error("User not found in Supabase: " + (userError?.message || ""));
@@ -211,9 +193,9 @@ export async function POST(req: Request) {
       video_url: blob.url,
       transcription,
       summary,
-      duration_second: 0, // Set to 0 for now
-      videoTags,
-      embeddings,
+      duration_seconds: 0, // Set to 0 for now
+      tags,
+      embedding,
     });
     if (insertError) {
       throw new Error("Supabase insert error: " + insertError.message);
@@ -224,9 +206,8 @@ export async function POST(req: Request) {
       video_url: blob.url,
       transcription,
       summary,
-      videoTags,
-      embeddings,
-
+      tags,
+      embedding
     });
     
   } catch (error) {
